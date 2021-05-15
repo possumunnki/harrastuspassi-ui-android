@@ -23,6 +23,17 @@
                 android:paddingTop="0dp"
                 android:scrollbars="vertical">
 
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/hobbyBlue"
+                android:max="100"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
             <ImageView
                     android:id="@+id/hobby_image"
                     android:layout_width="0dp"
@@ -230,7 +241,6 @@
                     app:layout_constraintHorizontal_bias="1.0"
                     app:layout_constraintStart_toStartOf="@+id/description_label"
                     app:layout_constraintTop_toBottomOf="@+id/description_label" />
-
 
             <fragment xmlns:android="http://schemas.android.com/apk/res/android"
                     xmlns:map="http://schemas.android.com/apk/res-auto"

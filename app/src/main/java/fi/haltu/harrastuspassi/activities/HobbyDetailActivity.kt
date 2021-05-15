@@ -9,11 +9,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.View.GONE
-import android.widget.ImageView
-import android.widget.TableLayout
-import android.widget.TableRow
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ShareCompat
@@ -47,6 +45,7 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var locationAddress: TextView
     private lateinit var locationZipCode: TextView
     private lateinit var tableLayoutClock: TextView
+    private lateinit var progressCircle: ProgressBar
     private var hobbyEventID: Int = 0
     private var locationReceived: Boolean = true
 
@@ -85,6 +84,9 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         locationAddress = findViewById(R.id.promotion_location_address)
         locationZipCode = findViewById(R.id.promotion_location_zipcode)
         tableLayoutClock = findViewById(R.id.tableLayoutClock)
+        progressCircle = findViewById(R.id.progress_bar)
+        progressCircle.visibility = View.VISIBLE
+
         //Loads favorite id:s
         favorites = loadFavorites(this)
         if (favorites.contains(hobbyEventID)) {
@@ -377,7 +379,7 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
                         hobbyEvent = eventList[0]
                     }
                     setHobbyDetailView(eventList)
-
+                    progressCircle.visibility = View.GONE
                 }
             }
         }
