@@ -45,7 +45,7 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var locationAddress: TextView
     private lateinit var locationZipCode: TextView
     private lateinit var tableLayoutClock: TextView
-    private lateinit var progressCircle: ProgressBar
+    private lateinit var progressBar: ProgressBar
     private var hobbyEventID: Int = 0
     private var locationReceived: Boolean = true
 
@@ -71,22 +71,21 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         if (intent.extras!!.getSerializable("EXTRA_HOBBY_EVENT_ID") != null) {
             hobbyEventID = intent.extras!!.getSerializable("EXTRA_HOBBY_EVENT_ID") as Int
         }
-        GetHobbyEvent().execute()
 
         coverImageView = findViewById(R.id.hobby_image)
         titleTextView = findViewById(R.id.hobby_title)
         favoriteView = findViewById(R.id.favorite_icon_button)
         organizerTextView = findViewById(R.id.hobby_organizer)
         tableLayout = findViewById(R.id.tableLayout)
+        tableLayout.visibility = GONE
 
         locationNameTextView = findViewById(R.id.promotion_location)
         descriptionTextView = findViewById(R.id.description_text)
         locationAddress = findViewById(R.id.promotion_location_address)
         locationZipCode = findViewById(R.id.promotion_location_zipcode)
         tableLayoutClock = findViewById(R.id.tableLayoutClock)
-        progressCircle = findViewById(R.id.progress_bar)
-        progressCircle.visibility = View.VISIBLE
-
+        progressBar = findViewById(R.id.progress_bar)
+        progressBar.visibility = View.VISIBLE
         //Loads favorite id:s
         favorites = loadFavorites(this)
         if (favorites.contains(hobbyEventID)) {
@@ -127,6 +126,10 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map_icon) as SupportMapFragment
         mapFragment.getMapAsync(this)
+        if (this::hobbyEvent.isInitialized) {
+            setHobbyDetailView(hobbyEvent)
+        }
+        GetHobbyEvent().execute()
     }
 
 
@@ -208,7 +211,7 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
         return true
     }
 
-    private fun setHobbyDetailView(hobbyEvents: ArrayList<HobbyEvent>) {
+    private fun setHobbyDetailView(hobbyEvents: HobbyEvent) {
         val filters = loadFilters(this)
 
         // FIREBASE ANALYTICS
@@ -239,25 +242,56 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
 
         //COVER IMAGE
         Picasso.with(this)
-            .load(hobbyEvents[0].hobby.imageUrl)
+            .load(hobbyEvents.hobby.imageUrl)
             .placeholder(R.drawable.hp_logo_pink)
             .error(R.drawable.hp_logo_pink)
             .into(coverImageView)
 
         //TITLE
-        titleTextView.text = hobbyEvents[0].hobby.name
+        titleTextView.text = hobbyEvents.hobby.name
         //ORGANIZER
-        if (hobbyEvents[0].hobby.organizer != null) {
-            organizerTextView.text = hobbyEvents[0].hobby.organizer!!.name
+        if (hobbyEvents.hobby.organizer != null) {
+            organizerTextView.text = hobbyEvents.hobby.organizer!!.name
         } else {
             organizerTextView.text = ""
         }
 
         //LOCATION
-        locationNameTextView.text = hobbyEvents[0].hobby.location.name
-        locationAddress.text = hobbyEvents[0].hobby.location.address
-        locationZipCode.text = hobbyEvents[0].hobby.location.zipCode
+        locationNameTextView.text = hobbyEvents.hobby.location.name
+        locationAddress.text = hobbyEvents.hobby.location.address
+        locationZipCode.text = hobbyEvents.hobby.location.zipCode
 
+        //DESCRIPTION
+        descriptionTextView.setTextWithLinkSupport(hobbyEvents.hobby.description) {
+            var url = it
+            if (!url.startsWith("http://") && !url.startsWith("https://"))
+                url = "http://$url";
+            // Opens url in browser
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(browserIntent)
+        }
+
+        //MAP
+        if (hobbyEvents.hobby.location.lat != null) {
+            latLan =
+                LatLng(hobbyEvents.hobby.location.lat!!, hobbyEvents.hobby.location.lon!!)
+        } else {
+            locationReceived = false
+        }
+        if (locationReceived) {
+            val markerPos = latLan
+            if(this::map.isInitialized) {
+                map.addMarker(
+                    MarkerOptions()
+                        .position(markerPos)
+                        .icon(bitmapDescriptorFromVector(this, R.drawable.ic_location_24dp))
+                )
+                map.moveCamera(CameraUpdateFactory.newLatLng(markerPos))
+            }
+        }
+    }
+
+    private fun createTable(hobbyEvents: ArrayList<HobbyEvent>) {
         //TABLE
         for (hobbyEvent in hobbyEvents) {
             if(hobbyEvent.isLipasEvent()) {
@@ -279,33 +313,6 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 tableLayout.addView(row)
             }
-        }
-
-        //DESCRIPTION
-        descriptionTextView.setTextWithLinkSupport(hobbyEvents[0].hobby.description) {
-            var url = it
-            if (!url.startsWith("http://") && !url.startsWith("https://"))
-                url = "http://$url";
-            // Opens url in browser
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            startActivity(browserIntent)
-        }
-
-        //MAP
-        if (hobbyEvents[0].hobby.location.lat != null) {
-            latLan =
-                LatLng(hobbyEvents[0].hobby.location.lat!!, hobbyEvents[0].hobby.location.lon!!)
-        } else {
-            locationReceived = false
-        }
-        if (locationReceived) {
-            val markerPos = latLan
-            map.addMarker(
-                MarkerOptions()
-                    .position(markerPos)
-                    .icon(bitmapDescriptorFromVector(this, R.drawable.ic_location_24dp))
-            )
-            map.moveCamera(CameraUpdateFactory.newLatLng(markerPos))
         }
     }
 
@@ -362,7 +369,6 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 else -> {
-
                     val results = JSONObject(result)
                     val jsonArray = results.getJSONArray("results")
                     for (i in 0 until jsonArray.length()) {
@@ -373,13 +379,12 @@ class HobbyDetailActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
 
                     if (eventList.isEmpty()) {
-
                         showErrorDialog()
                     } else {
-                        hobbyEvent = eventList[0]
+                        setHobbyDetailView(eventList[0])
+                        createTable(eventList)
                     }
-                    setHobbyDetailView(eventList)
-                    progressCircle.visibility = View.GONE
+                    progressBar.visibility = View.GONE
                 }
             }
         }
